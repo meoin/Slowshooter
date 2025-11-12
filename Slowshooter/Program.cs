@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 
 namespace Slowshooter
 {
@@ -7,11 +8,11 @@ namespace Slowshooter
     {
 
         static string playField = 
-@"+---+   +---+
-|   |   |   |
-|   |   |   |
-|   |   |   |
-+---+   +---+";
+@"         +---+
+         |   |
+         |   |
+         |   |
+         +---+";
 
         static bool isPlaying = true;
 
@@ -36,12 +37,24 @@ namespace Slowshooter
         static (int, int) p2_min_max_x = (9, 11);
         static (int, int) p2_min_max_y = (1, 3);
 
+        //steals
+        static bool playerOneSteal = true;
+        static bool playerTwoSteal = true;
+
         // what turn is it? will be 0 after game is drawn the first time
-        static int turn = -1;
+        static int turn = 0;
 
         // contains the keys that player 1 and player 2 are allowed to press
-        static (char[], char[]) allKeybindings = (new char[]{ 'W', 'A', 'S', 'D' }, new char[]{ 'J', 'I', 'L', 'K' });
+        static char[] allKeybindings = new char[]{'Q', 'W', 'E', 'A', 'S', 'D', 'Z', 'X', 'C', 'U', 'J', 'O', 'I', 'L', 'K', 'M', ',', '.' };
+        static char[] playerOneKeys = new char[] { 'Q', 'W', 'E', 'A', 'S', 'D', 'Z', 'X', 'C' };
+        static char[] playerTwoKeys = new char[] { 'U', 'J', 'O', 'I', 'L', 'K', 'M', ',', '.' };
         static ConsoleColor[] playerColors = { ConsoleColor.Red, ConsoleColor.Blue };
+
+        static int[,] ticTacToArray = {
+            {0, 0, 0},
+            {0, 0, 0},
+            {0, 0, 0}
+        };
 
         static void Main(string[] args)
         {
@@ -49,11 +62,81 @@ namespace Slowshooter
 
             while(isPlaying)
             {
+                Draw();
                 ProcessInput();
                 Update();
                 Draw();
-                
+                int winner = CheckForWin();
+                if (winner == 1)
+                {
+                    isPlaying = false;
+                    Console.WriteLine("Player 1 Wins!!!");
+                    break;
+                }
+                else if (winner == 2) 
+                {
+                    isPlaying = false;
+                    Console.WriteLine("Player 2 Wins!!!");
+                    break;
+                }
+                else if (winner == -1)
+                {
+                    isPlaying = false;
+                    Console.WriteLine("You guys suck its a tie!!!!!");
+                    break;
+                }
+                Draw();
             }
+        }
+
+        static int CheckForWin() 
+        {
+            int winner = 0;
+
+            // check for if game is over
+            bool anyEmptySpots = false;
+
+            for (int row = 0; row < 3; row++)
+            {
+                for (int col = 0; col < 3; col++)
+                {
+                    if (ticTacToArray[row, col] == 0) anyEmptySpots = true;
+                }
+            }
+
+            if (!anyEmptySpots) winner = -1;
+
+            // check rows
+            for (int i = 0; i < 3; i++) 
+            {
+                if (ticTacToArray[i, 0] == ticTacToArray[i, 1] && ticTacToArray[i, 1] == ticTacToArray[i, 2] && ticTacToArray[i, 0] != 0) 
+                {
+                    winner = ticTacToArray[i, 0];
+                }
+            }
+            // check columns
+            for (int i = 0; i < 3; i++)
+            {
+                if (ticTacToArray[0, i] == ticTacToArray[1, i] && ticTacToArray[1, i] == ticTacToArray[2, i] && ticTacToArray[0, i] != 0)
+                {
+                    winner = ticTacToArray[0, i];
+                }
+            }
+
+            // downwards diagonal
+            if (ticTacToArray[0, 0] == ticTacToArray[1, 1] && ticTacToArray[1, 1] == ticTacToArray[2, 2] && ticTacToArray[0, 0] != 0) 
+            {
+                winner = ticTacToArray[0, 0];
+            }
+            // upwards diagonal
+            if (ticTacToArray[2, 0] == ticTacToArray[1, 1] && ticTacToArray[1, 1] == ticTacToArray[0, 2] && ticTacToArray[1, 1] != 0)
+            {
+                winner = ticTacToArray[1, 1];
+            }
+
+            
+
+            return winner;
         }
 
         static void ProcessInput()
@@ -70,43 +153,146 @@ namespace Slowshooter
             char[] allowedKeysThisTurn; // different keys allowed on p1 vs. p2 turn
 
             // choose which keybindings to use
-            if (turn % 2 == 0) allowedKeysThisTurn = allKeybindings.Item1;
-            else allowedKeysThisTurn = allKeybindings.Item2;
+            if (turn % 2 == 0) allowedKeysThisTurn = playerOneKeys;
+            else allowedKeysThisTurn = playerTwoKeys;
 
             // get the current player's input
-            ConsoleKey input = ConsoleKey.NoName;
-            while (!allowedKeysThisTurn.Contains(((char)input)))
+            char input = ' ';
+            while (!allowedKeysThisTurn.Contains(input))
             {
-                input = Console.ReadKey(true).Key;
+                input = Char.ToUpper(Console.ReadKey(true).KeyChar);
+                //Console.WriteLine(input);
             }
 
             // check all input keys 
-            if (input == ConsoleKey.A) p1_x_input = -1;
-            if (input == ConsoleKey.D) p1_x_input = 1;
-            if (input == ConsoleKey.W) p1_y_input = -1;
-            if (input == ConsoleKey.S) p1_y_input = 1;
-          
-            if (input == ConsoleKey.J) p2_x_input = -1;
-            if (input == ConsoleKey.L) p2_x_input = 1;
-            if (input == ConsoleKey.I) p2_y_input = -1;
-            if (input == ConsoleKey.K) p2_y_input = 1;
+            if (input == 'Q') 
+            {
+                p1_x_input = 0;
+                p1_y_input = 0;
+            }
+            if (input == 'A') 
+            {
+                p1_x_input = 0;
+                p1_y_input = 1;
+            }
+            if (input == 'E')
+            {
+                p1_x_input = 2;
+                p1_y_input = 0;
+            }
+            if (input == 'D')
+            {
+                p1_x_input = 2;
+                p1_y_input = 1;
+            }
+            if (input == 'W')
+            {
+                p1_y_input = 0;
+                p1_x_input = 1;
+            }
+            if (input == 'S')
+            {
+                p1_y_input = 1;
+                p1_x_input = 1;
+            }
+            if (input == 'Z')
+            {
+                p1_x_input = 0;
+                p1_y_input = 2;
+            }
+            if (input == 'X')
+            {
+                p1_x_input = 1;
+                p1_y_input = 2;
+            }
+            if (input == 'C')
+            {
+                p1_x_input = 2;
+                p1_y_input = 2;
+            }
+
+            //player two
+            if (input == 'U')
+            {
+                p2_x_input = 0;
+                p2_y_input = 0;
+            }
+            if (input == 'J')
+            {
+                p2_x_input = 0;
+                p2_y_input = 1;
+            }
+            if (input == 'O')
+            {
+                p2_x_input = 2;
+                p2_y_input = 0;
+            }
+            if (input == 'L')
+            {
+                p2_x_input = 2;
+                p2_y_input = 1;
+            }
+            if (input == 'I')
+            {
+                p2_y_input = 0;
+                p2_x_input = 1;
+            }
+            if (input == 'K')
+            {
+                p2_y_input = 1;
+                p2_x_input = 1;
+            }
+            if (input == 'M')
+            {
+                p2_x_input = 0;
+                p2_y_input = 2;
+            }
+            if (input == ',')
+            {
+                p2_x_input = 1;
+                p2_y_input = 2;
+            }
+            if (input == '.')
+            {
+                p2_x_input = 2;
+                p2_y_input = 2;
+            }
 
         }
 
         static void Update()
         {
-            // update players' positions based on input
-            p1_x_pos += p1_x_input;
-            p1_x_pos = p1_x_pos.Clamp(p1_min_max_x.Item1, p1_min_max_x.Item2);
-
-            p1_y_pos += p1_y_input;
-            p1_y_pos = p1_y_pos.Clamp(p1_min_max_y.Item1, p1_min_max_y.Item2);
-
-            p2_x_pos += p2_x_input;
-            p2_x_pos = p2_x_pos.Clamp(p2_min_max_x.Item1, p2_min_max_x.Item2);
-
-            p2_y_pos += p2_y_input;
-            p2_y_pos = p2_y_pos.Clamp(p2_min_max_y.Item1, p2_min_max_y.Item2);
+            if (turn % 2 == 0)
+            {
+                if (ticTacToArray[p1_y_input, p1_x_input] == 2)
+                {
+                    if (playerOneSteal)
+                    {
+                        playerOneSteal = false;
+                        ticTacToArray[p1_y_input, p1_x_input] = 1;
+                    }
+                }
+                else 
+                {
+                    ticTacToArray[p1_y_input, p1_x_input] = 1;
+                }
+                   
+            }
+            else 
+            {
+                if (ticTacToArray[p2_y_input, p2_x_input] == 1)
+                {
+                    if (playerTwoSteal)
+                    {
+                        playerTwoSteal = false;
+                        ticTacToArray[p2_y_input, p2_x_input] = 2;
+                    }
+                }
+                else
+                {
+                    ticTacToArray[p2_y_input, p2_x_input] = 2;
+                }
+            }
 
             turn += 1;
 
@@ -118,15 +304,25 @@ namespace Slowshooter
             Console.SetCursorPosition(0, 0);
             Console.Write(playField);
 
-            // draw player 1
-            Console.SetCursorPosition(p1_x_pos, p1_y_pos);
-            Console.ForegroundColor = playerColors[0];
-            Console.Write("O");
-
-            // draw player 2
-            Console.SetCursorPosition(p2_x_pos, p2_y_pos);
-            Console.ForegroundColor = playerColors[1];
-            Console.Write("O");
+            // draw the tic tac toe inputs
+            for (int row = 0; row < 3; row++) 
+            {
+                for (int col = 0; col < 3; col++) 
+                {
+                    Console.SetCursorPosition(col+10, row+1);
+                    if (ticTacToArray[row, col] == 1)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        
+                        Console.Write('X');
+                    }
+                    else if (ticTacToArray[row, col] == 2) 
+                    {
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.Write('O');
+                    }
+                }
+            }
 
             // draw the Turn Indicator
             Console.SetCursorPosition(3, 5);
@@ -136,7 +332,36 @@ namespace Slowshooter
 
 
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("\nUSE WASD or IJKL to move");
+            if (turn % 2 == 0)
+            {
+                Console.WriteLine("\n          QWE");
+                Console.WriteLine("          ASD");
+                Console.WriteLine("          ZXC");
+                if (playerOneSteal)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("You have one steal available!");
+                }
+                else 
+                {
+                    Console.WriteLine("                                   ");
+                }
+            }
+            else
+            {
+                Console.WriteLine("\n          UIO");
+                Console.WriteLine("          JKL");
+                Console.WriteLine("          M,.");
+                if (playerTwoSteal)
+                {
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine("You have one steal available!");
+                }
+                else
+                {
+                    Console.WriteLine("                                   ");
+                }
+            }
             Console.ForegroundColor = ConsoleColor.White;
         }
     }
